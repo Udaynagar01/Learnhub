@@ -67,7 +67,6 @@ Run `npm run seed` once after MongoDB is connected.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@learnhub.com | Admin@123 |
 | Instructor | instructor@learnhub.com | Instructor@123 |
 | Student | student@learnhub.com | Student@123 |
 
