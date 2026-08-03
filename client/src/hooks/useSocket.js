@@ -16,12 +16,24 @@ export function useSocket(onEvent) {
     const socket = io(SOCKET_URL, {
       auth: { token },
       withCredentials: true,
+      transports: ["websocket"],
     });
 
     Object.entries(onEvent).forEach(([event, handler]) => {
-      if (handler) socket.on(event, handler);
+      if (handler) {
+        socket.on(event, handler);
+      }
     });
 
-    return () => socket.disconnect();
-  }, [user]);
+    return () => {
+      Object.entries(onEvent).forEach(([event, handler]) => {
+        if (handler) {
+          socket.off(event, handler);
+        }
+      });
+
+      socket.disconnect();
+    };
+
+  }, [user, onEvent]);
 }
