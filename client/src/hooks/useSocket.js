@@ -1,63 +1,145 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 
 const SOCKET_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-export function useSocket(onEvent) {
+export function useSocket(events = {}) {
   const { user } = useAuth();
 
+  const socketRef = useRef(null);
+  const eventsRef = useRef(events);
+
+  // Always keep latest events
   useEffect(() => {
-    if (!user || !onEvent) return;
+    eventsRef.current = events;
+  }, [events]);
+
+
+  useEffect(() => {
+    if (!user) return;
+
 
     const token = localStorage.getItem("accessToken");
 
+    if (!token) return;
+
+
+    // Prevent duplicate socket
+    if (socketRef.current) {
+      return;
+    }
+
+
     const socket = io(SOCKET_URL, {
+
       auth: {
         token,
       },
 
       withCredentials: true,
 
-      // Render compatible
-      transports: ["polling", "websocket"],
+      transports: [
+        "polling",
+        "websocket"
+      ],
 
-      // Auto reconnect
       reconnection: true,
-      reconnectionAttempts: 10,
+
+      reconnectionAttempts: Infinity,
+
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+
       timeout: 20000,
     });
 
+
+    socketRef.current = socket;
+
+
     socket.on("connect", () => {
-      console.log("✅ Socket Connected:", socket.id);
+      console.log(
+        "✅ Socket Connected:",
+        socket.id
+      );
     });
+
 
     socket.on("disconnect", (reason) => {
-      console.log("❌ Socket Disconnected:", reason);
+      console.log(
+        "❌ Socket Disconnected:",
+        reason
+      );
     });
 
-    socket.on("connect_error", (err) => {
-      console.error("🚨 Socket Connection Error:", err.message);
+
+    socket.on("connect_error", (error) => {
+      console.log(
+        "🚨 Socket Error:",
+        error.message
+      );
     });
 
-    Object.entries(onEvent).forEach(([event, handler]) => {
-      if (typeof handler === "function") {
-        socket.on(event, handler);
-      }
-    });
 
     return () => {
-      Object.entries(onEvent).forEach(([event, handler]) => {
-        if (typeof handler === "function") {
-          socket.off(event, handler);
-        }
-      });
 
       socket.removeAllListeners();
+
       socket.disconnect();
+
+      socketRef.current = null;
+
     };
-  }, [user, onEvent]);
+
+
+  }, [user]);
+
+
+  // Register events separately
+  useEffect(() => {
+
+    const socket = socketRef.current;
+
+    if (!socket) return;
+
+
+    Object.entries(eventsRef.current).forEach(
+      ([event, handler]) => {
+
+        if(typeof handler === "function"){
+
+          socket.on(
+            event,
+            handler
+          );
+
+        }
+
+      }
+    );
+
+
+    return () => {
+
+      Object.entries(eventsRef.current).forEach(
+        ([event, handler]) => {
+
+          if(typeof handler === "function"){
+
+            socket.off(
+              event,
+              handler
+            );
+
+          }
+
+        }
+      );
+
+    };
+
+
+  }, [events]);
+
 }
