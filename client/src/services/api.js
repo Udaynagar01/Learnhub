@@ -6,8 +6,6 @@ const API_URL =
 console.log("================================");
 console.log("API_URL =", API_URL);
 console.log("================================");
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
@@ -48,17 +46,23 @@ api.interceptors.response.use(
           }
         );
 
-        localStorage.setItem("accessToken", data.data.accessToken);
+        localStorage.setItem(
+          "accessToken",
+          data.data.accessToken
+        );
 
-        original.headers.Authorization = `Bearer ${data.data.accessToken}`;
+        original.headers.Authorization =
+          `Bearer ${data.data.accessToken}`;
 
         refreshing = false;
 
         return api(original);
+
       } catch (err) {
         refreshing = false;
         localStorage.removeItem("accessToken");
         window.location.href = "/login";
+
         return Promise.reject(err);
       }
     }
